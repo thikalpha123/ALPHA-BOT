@@ -50,7 +50,9 @@ if (!fs.existsSync(__dirname + '/auth_info_baileys/creds.json')) {
 }
 
 const { replyHandlers, commands } = require('./command');
-
+const antiDeletePlugin = require('./plugins/antidelete.js');
+global.pluginHooks = global.pluginHooks || [];
+global.pluginHooks.push(antiDeletePlugin);
 async function connectToWA() {
   console.log("🛰️ [DANUWA-MD] Initializing WhatsApp connection...");
   const { state, saveCreds } = await useMultiFileAuthState(__dirname + '/auth_info_baileys/');
@@ -106,9 +108,36 @@ async function connectToWA() {
 
   conn.ev.on('creds.update', saveCreds);
 
- conn.ev.on('messages.upsert', async(mek) => {
+  conn.ev.on('messages.upsert', async(mek) => {
     mek = mek.messages[0]
     if (!mek.message) return
+    const contentType = getContentType(mek.message);
+    const content = mek.message[contentType];
+
+    if (['imageMessage', 'videoMessage', 'audioMessage', 'stickerMessage', 'documentMessage'].includes(contentType)) {
+      try {
+        const stream = await downloadContentFromMessage(content, contentType.replace('Message', ''));
+        const buffer = [];
+        for await (const chunk of stream) buffer.push(chunk);
+        mek._mediaBuffer = Buffer.concat(buffer);
+        mek._mediaType = contentType;
+      } catch (err) {
+        console.log('❌ Failed to pre-download media:', err.message);
+      }
+    }
+
+    // Run plugins onMessage hooks
+    if (global.pluginHooks) {
+      for (const plugin of global.pluginHooks) {
+        if (plugin.onMessage) {
+          try {
+            await plugin.onMessage(conn, mek);
+          } catch (e) {
+            console.log("onMessage error:", e);
+          }
+        }
+      }
+    }
     mek.message = (getContentType(mek.message) === 'ephemeralMessage') 
     ? mek.message.ephemeralMessage.message 
     : mek.message;
@@ -168,30 +197,30 @@ async function connectToWA() {
 
     const reply = (text) => conn.sendMessage(from, { text }, { quoted: mek });
 
-conn.decodeJid = jid => {
-    if (!jid) return jid;
-    if (/:\d+@/gi.test(jid)) {
-      let decode = jidDecode(jid) || {};
-      return (
-        (decode.user &&
-          decode.server &&
-          decode.user + '@' + decode.server) ||
-        jid
-      );
-    } else return jid;
-  };
+    conn.decodeJid = jid => {
+      if (!jid) return jid;
+      if (/:\d+@/gi.test(jid)) {
+        let decode = jidDecode(jid) || {};
+        return (
+          (decode.user &&
+            decode.server &&
+            decode.user + '@' + decode.server) ||
+          jid
+        );
+      } else return jid;
+    };
    
     if (isCmd) {
       const cmd = commands.find((c) => c.pattern === commandName || (c.alias && c.alias.includes(commandName)));
       if (cmd) {
-switch ((config.MODE || 'public').toLowerCase()) {
-  case 'private':
-    if (!isOwner) return;
-    break;
-  case 'public':
-  default:
-    break;
-}
+        switch ((config.MODE || 'public').toLowerCase()) {
+          case 'private':
+            if (!isOwner) return;
+            break;
+          case 'public':
+          default:
+            break;
+        }
         
         if (cmd.react) conn.sendMessage(from, { react: { text: cmd.react, key: mek.key } });
 
@@ -222,8 +251,21 @@ switch ((config.MODE || 'public').toLowerCase()) {
       }
     }
   });
-}
 
+  conn.ev.on('messages.update', async (updates) => {
+    if (global.pluginHooks) {
+      for (const plugin of global.pluginHooks) {
+        if (plugin.onDelete) {
+          try {
+            await plugin.onDelete(conn, updates);
+          } catch (e) {
+            console.log("onDelete error:", e);
+          }
+        }
+      }
+    }
+  });
+}
 
 app.get("/", (req, res) => {
   res.send("Hey, DANUWA-MD started✅");
