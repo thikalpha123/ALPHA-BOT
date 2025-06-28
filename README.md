@@ -70,8 +70,8 @@
 
 2. **Generate Session ID**  
     [Generate Session ID - 1](https://danuwa-official.vercel.app/)</br>
-             OR
-   [Generate Session ID - 2]([https://danuwa-official.vercel.app/](https://replit.com/@quizontalbot/DANUWA-MD-SESSION-ID?v=1#index.js))
+             OR </br>
+   [Generate Session ID - 2](https://replit.com/@quizontalbot/DANUWA-MD-SESSION-ID?v=1#index.js)
 
 4. **Configure Session and Owner Info**  
  - Edit `config.js` with your session ID and owner number (international format)
