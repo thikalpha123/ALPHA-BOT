@@ -69,7 +69,7 @@
    [DANUWA-MD GitHub Repo](https://github.com/DANUWA-MD/DANUWA-BOT)
 
 2. **Generate Session ID**  
-    [Generate Session ID - 1](https://danuwa-official.vercel.app/)
+    [Generate Session ID - 1](https://danuwa-official.vercel.app/)</br>
              OR
    [Generate Session ID - 2]([https://danuwa-official.vercel.app/](https://replit.com/@quizontalbot/DANUWA-MD-SESSION-ID?v=1#index.js))
 
