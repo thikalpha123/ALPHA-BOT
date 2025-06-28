@@ -69,7 +69,10 @@
    [DANUWA-MD GitHub Repo](https://github.com/DANUWA-MD/DANUWA-BOT)
 
 2. **Generate Session ID**  
-    [Generate Session ID](https://danuwa-official.vercel.app/)
+    [Generate Session ID - 1](https://danuwa-official.vercel.app/)
+             OR
+   [Generate Session ID - 2]([https://danuwa-official.vercel.app/](https://replit.com/@quizontalbot/DANUWA-MD-SESSION-ID?v=1#index.js))
+
 4. **Configure Session and Owner Info**  
  - Edit `config.js` with your session ID and owner number (international format)
  - Edit `config.js` with your Gemini API Key (Optional)
