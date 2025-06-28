@@ -70,7 +70,7 @@
 
 2. **Generate Session ID**  
     [Generate Session ID - 1](https://danuwa-official.vercel.app/)</br></br>
-             OR </br>
+             OR </br></br>
    [Generate Session ID - 2](https://replit.com/@quizontalbot/DANUWA-MD-SESSION-ID?v=1#index.js)
 
 4. **Configure Session and Owner Info**  
