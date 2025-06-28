@@ -53,11 +53,12 @@ const { replyHandlers, commands } = require('./command');
 const antiDeletePlugin = require('./plugins/antidelete.js');
 global.pluginHooks = global.pluginHooks || [];
 global.pluginHooks.push(antiDeletePlugin);
+
 async function connectToWA() {
   console.log("🛰️ [DANUWA-MD] Initializing WhatsApp connection...");
   const { state, saveCreds } = await useMultiFileAuthState(__dirname + '/auth_info_baileys/');
   const { version } = await fetchLatestBaileysVersion();
-
+  
   const conn = makeWASocket({
     logger: P({ level: 'silent' }),
     printQRInTerminal: false,
@@ -65,6 +66,41 @@ async function connectToWA() {
     syncFullHistory: true,
     auth: state,
     version
+  });
+  conn.ev.on('group-participants.update', async (update) => {
+    try {
+      const { id: groupId, participants, action } = update;
+      const metadata = await conn.groupMetadata(groupId);
+      const groupName = metadata.subject || 'this group';
+
+      if (action === 'add') {
+        for (const userId of participants) {
+          const number = userId.split('@')[0];
+          const message = `🗯️ *WELCOME TO ${groupName}, @${number}!* ❤‍🩹\n\nWe’re delighted to have you join our community.\n\n✅ Please take a moment to read the group rules and feel free to introduce yourself.\n\n💎 *Let’s build a friendly and respectful environment together!*`;
+
+          await conn.sendMessage(groupId, {
+            image: { url: 'https://github.com/DANUWA-MD/DANUWA-BOT/blob/main/images/welcome.jpg?raw=true' },
+            caption: message,
+            mentions: [userId]
+          });
+        }
+      }
+
+      if (action === 'remove') {
+        for (const userId of participants) {
+          const number = userId.split('@')[0];
+          const message = `👋 *Goodbye @${number}!* 👋\n\nThank you for being part of ${groupName}. *We wish you all the best!❤‍🩹*`;
+
+          await conn.sendMessage(groupId, {
+            image: { url: 'https://github.com/DANUWA-MD/DANUWA-BOT/blob/main/images/leave.jpg?raw=true' },
+            caption: message,
+            mentions: [userId]
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Group participants update error:', e);
+    }
   });
 
   conn.ev.on('connection.update', (update) => {
@@ -109,8 +145,8 @@ async function connectToWA() {
   conn.ev.on('creds.update', saveCreds);
 
   conn.ev.on('messages.upsert', async(mek) => {
-    mek = mek.messages[0]
-    if (!mek.message) return
+    mek = mek.messages[0];
+    if (!mek.message) return;
     const contentType = getContentType(mek.message);
     const content = mek.message[contentType];
 
@@ -138,36 +174,42 @@ async function connectToWA() {
         }
       }
     }
+    
     mek.message = (getContentType(mek.message) === 'ephemeralMessage') 
-    ? mek.message.ephemeralMessage.message 
-    : mek.message;
-  if (config.READ_MESSAGE === 'true') {
-    await conn.readMessages([mek.key]); 
-    console.log(`Marked message from ${mek.key.remoteJid} as read.`);
-  }
-    if(mek.message.viewOnceMessageV2)
-    mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message
-    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_SEEN === "true"){
-      await conn.readMessages([mek.key])
-    }
-         if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
-    const jawadlike = await conn.decodeJid(conn.user.id);
-    const emojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '💜', '💙', '🌝', '🖤', '💚'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    await conn.sendMessage(mek.key.remoteJid, {
-      react: {
-        text: randomEmoji,
-        key: mek.key,
-      } 
-    }, { statusJidList: [mek.key.participant, jawadlike] });
-  }                        
-  if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REPLY === "true"){
-  const user = mek.key.participant
-  const text = `${config.AUTO_STATUS__MSG}`
-  await conn.sendMessage(user, { text: text, react: { text: '✈️', key: mek.key } }, { quoted: mek })
-            }
+      ? mek.message.ephemeralMessage.message 
+      : mek.message;
 
- const m = sms(conn, mek);
+    if (config.READ_MESSAGE === 'true') {
+      await conn.readMessages([mek.key]); 
+      console.log(`Marked message from ${mek.key.remoteJid} as read.`);
+    }
+    
+    if(mek.message.viewOnceMessageV2)
+      mek.message = (getContentType(mek.message) === 'ephemeralMessage') ? mek.message.ephemeralMessage.message : mek.message;
+
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_SEEN === "true"){
+      await conn.readMessages([mek.key]);
+    }
+
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REACT === "true"){
+      const jawadlike = await conn.decodeJid(conn.user.id);
+      const emojis = ['❤️', '💸', '😇', '🍂', '💥', '💯', '🔥', '💫', '💎', '💗', '🤍', '🖤', '👀', '🙌', '🙆', '🚩', '🥰', '💐', '😎', '🤎', '✅', '🫀', '🧡', '😁', '😄', '🌸', '🕊️', '🌷', '⛅', '🌟', '🗿', '💜', '💙', '🌝', '🖤', '💚'];
+      const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+      await conn.sendMessage(mek.key.remoteJid, {
+        react: {
+          text: randomEmoji,
+          key: mek.key,
+        } 
+      }, { statusJidList: [mek.key.participant, jawadlike] });
+    }
+
+    if (mek.key && mek.key.remoteJid === 'status@broadcast' && config.AUTO_STATUS_REPLY === "true"){
+      const user = mek.key.participant;
+      const text = `${config.AUTO_STATUS__MSG}`;
+      await conn.sendMessage(user, { text: text, react: { text: '✈️', key: mek.key } }, { quoted: mek });
+    }
+
+    const m = sms(conn, mek);
     const type = getContentType(mek.message);
     const from = mek.key.remoteJid;
     const body = type === 'conversation'
@@ -179,23 +221,43 @@ async function connectToWA() {
     const args = body.trim().split(/ +/).slice(1);
     const q = args.join(' ');
 
-    const sender = mek.key.fromMe ? (conn.user.id.split(':')[0]+'@s.whatsapp.net' || conn.user.id) : (mek.key.participant || mek.key.remoteJid)
+    const sender = mek.key.fromMe 
+      ? (conn.user.id.split(':')[0]+'@s.whatsapp.net' || conn.user.id) 
+      : (mek.key.participant || mek.key.remoteJid);
+
     const senderNumber = sender.split('@')[0];
     const isGroup = from.endsWith('@g.us');
     const botNumber = conn.user.id.split(':')[0];
     const pushname = mek.pushName || 'Sin Nombre';
     const isMe = botNumber.includes(senderNumber);
     const isOwner = ownerNumber.includes(senderNumber) || isMe;
+
     const botNumber2 = await jidNormalizedUser(conn.user.id);
 
-    const groupMetadata = isGroup ? await conn.groupMetadata(from).catch(() => {}) : '';
-    const groupName = isGroup ? groupMetadata.subject : '';
-    const participants = isGroup ? groupMetadata.participants : '';
-    const groupAdmins = isGroup ? await getGroupAdmins(participants) : '';
-    const isBotAdmins = isGroup ? groupAdmins.includes(botNumber2) : false;
-    const isAdmins = isGroup ? groupAdmins.includes(sender) : false;
+    // [FIXED] Normalize admin checks to prevent admin detection issues
+    const groupMetadata = isGroup ? await conn.groupMetadata(from).catch(() => ({})) : {};
+    const groupName = groupMetadata?.subject || 'No Group Name'; // [FIXED] safe groupName default
+    const participants = groupMetadata.participants || [];
 
-    const reply = (text) => conn.sendMessage(from, { text }, { quoted: mek });
+    const groupAdminsRaw = isGroup ? getGroupAdmins(participants) : [];
+    const groupAdmins = groupAdminsRaw.map(jidNormalizedUser);
+
+    const senderId = jidNormalizedUser(sender);
+    const botId = jidNormalizedUser(conn.user.id);
+
+    const isAdmins = groupAdmins.includes(senderId);
+    const isBotAdmins = groupAdmins.includes(botId);
+
+    // Reply helper
+    const reply = (text, options = {}) => conn.sendMessage(from, { text, ...options }, { quoted: mek });
+
+    // Auto-reply greeting plugin
+    try {
+      const autoReply = require("./plugins/auto-reply.js");
+      if (autoReply.autoreply) await autoReply.autoreply(conn, mek);
+    } catch (err) {
+      console.log("🔁 Auto-reply plugin error:", err);
+    }
 
     conn.decodeJid = jid => {
       if (!jid) return jid;
@@ -209,7 +271,7 @@ async function connectToWA() {
         );
       } else return jid;
     };
-   
+
     if (isCmd) {
       const cmd = commands.find((c) => c.pattern === commandName || (c.alias && c.alias.includes(commandName)));
       if (cmd) {
