@@ -18,4 +18,5 @@ function setCommitHash(hash) {
     fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 }
 
+
 module.exports = { getCommitHash, setCommitHash };
